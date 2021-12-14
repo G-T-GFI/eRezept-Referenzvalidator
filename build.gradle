@@ -49,6 +49,7 @@ configure(subprojects.findAll {it.name != "bom"}) {
         implementation("com.fasterxml.woodstox:woodstox-core:6.2.7")
         implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
         testImplementation("org.junit.jupiter:junit-jupiter:5.7.2")
+        testImplementation('org.hamcrest:hamcrest-library:2.1')
     }
     java{
         sourceCompatibility = JavaVersion.VERSION_1_8

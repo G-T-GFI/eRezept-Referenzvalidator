@@ -1,14 +1,17 @@
 package de.abda.fhir.validator.core;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.support.IValidationSupport;
 import ca.uhn.fhir.validation.FhirValidator;
 import de.abda.fhir.validator.core.configuration.*;
 import de.abda.fhir.validator.core.exception.ValidatorInitializationException;
+import de.abda.fhir.validator.core.support.NpmPackageValidationSupportCache;
 import de.abda.fhir.validator.core.support.VersionRemovingNpmPackageValidationSupport;
 import de.abda.fhir.validator.core.util.FhirPackagePropertiesHelper;
 import de.abda.fhir.validator.core.util.Profile;
 import de.abda.fhir.validator.core.util.ValidationSupportChainHelper;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hl7.fhir.common.hapi.validation.support.PrePopulatedValidationSupport;
 import org.hl7.fhir.common.hapi.validation.support.ValidationSupportChain;
 import org.hl7.fhir.common.hapi.validation.validator.FhirInstanceValidator;
 import org.slf4j.Logger;
@@ -25,6 +28,7 @@ public class ValidatorFactory {
 
     private FhirPackageProperties fhirPackageProperties;
     private FhirContext ctx;
+    private NpmPackageValidationSupportCache npmCache;
 
     public ValidatorFactory() {
         new ValidatorFactory(FhirContext.forR4());
@@ -33,6 +37,7 @@ public class ValidatorFactory {
     public ValidatorFactory(FhirContext ctx) {
         this.fhirPackageProperties = FhirPackagePropertiesHelper.loadFhirPackageProperties();
         this.ctx = ctx;
+        this.npmCache = new NpmPackageValidationSupportCache(this.ctx);
     }
 
     public Validator createValidatorForProfile(Profile profile) {
@@ -64,14 +69,18 @@ public class ValidatorFactory {
     }
 
     Validator loadValidator(String canonical, FhirProfileVersion fhirProfileVersion) {
-        VersionRemovingNpmPackageValidationSupport npmPackageSupport = new VersionRemovingNpmPackageValidationSupport(ctx);
         try{
             List<String> packageFilesToLoad = getPackageFilenameListToLoadFor(fhirProfileVersion);
+            List<String> correctedURIs = new ArrayList<>(packageFilesToLoad.size());
+            
+//            ctx.getParserOptions().setStripVersionsFromReferences(false);
+            
             for(String packageFilename : packageFilesToLoad) {
-                npmPackageSupport.loadPackageFromClasspath("classpath:package/" + packageFilename);
+            	correctedURIs.add("classpath:package/" + packageFilename);
             }
-
-            ValidationSupportChain validationSupportChain = ValidationSupportChainHelper.createValidationSupportChain(
+            PrePopulatedValidationSupport npmPackageSupport = this.npmCache.createPrePopulatedValidationSupport(correctedURIs);
+            
+            IValidationSupport validationSupportChain = ValidationSupportChainHelper.createValidationSupportChain(
                 npmPackageSupport, ctx);
 
             FhirValidator fhirValidator = ctx.newValidator();
@@ -129,6 +138,7 @@ public class ValidatorFactory {
             packageFilenameList.addAll(getFilenamesFromPackageDependencies(dependencies));
         }
         packageFilenameList = packageFilenameList.stream().distinct().collect(Collectors.toList());
+        
         return packageFilenameList;
     }
 

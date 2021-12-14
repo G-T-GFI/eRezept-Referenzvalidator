@@ -4,6 +4,7 @@ import ca.uhn.fhir.validation.ResultSeverityEnum;
 import ca.uhn.fhir.validation.SingleValidationMessage;
 import de.abda.fhir.validator.core.exception.ValidatorInitializationException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -21,6 +22,7 @@ import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.tuple.Pair.of;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Unittest for {@link ReferenceValidator}
@@ -44,7 +46,7 @@ class ReferenceValidatorTest {
         .map(key -> key + ": " + errors.get(key).size())
         .collect(Collectors.joining(","));
     System.out.println(mapAsString);
-    assertEquals(0, getFatalAndErrorMessages(errors).size());
+    assertThat(getFatalAndErrorMessages(errors), Matchers.emptyCollectionOf(SingleValidationMessage.class));
   }
 
   private static Stream<Path> validateValidFile() throws IOException {
